@@ -1,5 +1,10 @@
-﻿using System;
+﻿using Donnees;
+using RecupDonnees;
+using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading.Tasks;
 
 namespace Pokedex
 {
@@ -7,16 +12,20 @@ namespace Pokedex
     {
         static void Main(string[] args)
         {
-            Boolean running = true;
+            ApiHelper.InitializeClient();
+
+            InitializeConsole();
+        }
+
+        private static void InitializeConsole()
+        {
             var commands = new Dictionary<string, Action<string>>
             {
                 ["liste"] = ListeCommand,
+                ["pokemon"] = PokemonCommand,
             };
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Centrer("Bienvenue sur le Pokedex");
-            Centrer("Voici les commandes dont vous aurez besoin pour l'utiliser\n");
-            HelpCommand("");
+            DefaultConsole();
 
             do
             {
@@ -25,7 +34,11 @@ namespace Pokedex
                 {
                     if (commands.TryGetValue(arg[0].Substring(1), out var command))
                     {
-                        command(arg[0]);
+                        command(arg[1]);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Cette commande n'existe pas. Tapez help pour plus d'infos");
                     }
                 }
                 else
@@ -34,20 +47,20 @@ namespace Pokedex
                     switch (commande)
                     {
                         case "help":
-                            HelpCommand("");
+                            HelpCommand();
                             break;
                         case "exit":
-                            running = false;
+                            Environment.Exit(0);
                             break;
-                        default :
-                            if(commande != "")
+                        default:
+                            if (commande != "")
                             {
-                                Console.WriteLine("Nous n'avons pas compris cette commande. Tapez /help pour plus d'infos");
+                                Console.WriteLine("Nous n'avons pas compris cette commande. Tapez help pour plus d'infos");
                             }
                             break;
                     }
                 }
-            } while(running);       
+            } while (true);
         }
 
         public static void Centrer(string texte)
@@ -57,7 +70,7 @@ namespace Pokedex
             Console.WriteLine(texte);
         }
 
-        public static void HelpCommand(string arg)
+        public static void HelpCommand()
         {
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.Write("\nhelp");
@@ -81,37 +94,102 @@ namespace Pokedex
             Console.WriteLine(" : Quitter le pokédex");
         }
 
-        public static void ListeCommand(string arg)
+        public static async void ListeCommand(string arg)
         {
-            Console.WriteLine("Voici la liste des pokemons : ");
-            //Inserer requete api ici
-            //
-            //
-            //
-            /*-----------------------*/
-            Console.WriteLine("Appuyez sur espace pour passer à la page suivante et sur echap pour quitter");
-            bool running = true;
-            do
+            if (arg == "")
             {
-                switch (Console.ReadKey().Key)
+                arg = "20";
+            }
+            try
+            {
+                int limit = Int32.Parse(arg);
+                int page = 1;
+                int id = 0;
+                //Appel de l'API
+                Liste liste = null;
+                Task t = Task.Run(async () => {liste = await ApiCalls.GetList(limit); });
+                t.Wait();
+
+                int nbTotal = 1118;
+                if (limit <= 0 || limit > 1118)
                 {
-                    case (ConsoleKey.Spacebar):
-                        Console.WriteLine("page suivante..");
-                        // page suivante
-                        break;
-                    case (ConsoleKey.Escape):
-                        Console.WriteLine("_Fermeture de la liste.");
-                        running = false;
-                        break;
-                    default:
-                        break;
-                }
-            } while (running);
+                    limit = nbTotal;
+                }                        
+                int pageMax = (int)Math.Ceiling((double)nbTotal / limit);
+                bool running = true;
+
+                liste.Afficher(id);
+                ListeFooter(page, pageMax);
+                do
+                {
+                    ConsoleKey ck = Console.ReadKey().Key;
+                    switch (ck)
+                    {
+                        case ConsoleKey.Spacebar:
+                            // page suivante
+                            page++;
+                            id += limit;
+                            t = Task.Run(async () => { liste = await ApiCalls.GetNextList(liste);});
+                            t.Wait();
+                            if (page < pageMax)
+                            {
+                                liste.Afficher(id);
+                                ListeFooter(page, pageMax);
+                            }
+                            else if(page == pageMax)
+                            {
+                                liste.Afficher(id);
+                                ListeFooter(page, pageMax);
+                            }
+                            else
+                            {
+                                Console.Clear();
+                                DefaultConsole();
+                                running = false;
+                            }
+                            break;
+                        case ConsoleKey.Escape:
+                            Console.Clear();
+                            DefaultConsole();
+                            running = false;
+                            break;
+                        default:
+                            Console.WriteLine("defaut");
+                            break;
+                    }
+                } while (running);
+            }
+            catch
+            {
+                Console.WriteLine(arg + " n'est pas un nombre valide");
+            }
+        }
+        public static async void PokemonCommand(string arg)
+        {
+            try
+            {
+                var pokemon = await ApiCalls.GetPokemon(arg);
+                var species = await ApiCalls.GetDescription(pokemon.id);
+                pokemon.Afficher(species);
+            }
+            catch
+            {
+                Console.WriteLine("Le pokemon " + arg + " n'existe pas.");
+            } 
         }
 
-        public static void PokemonCommand(string arg)
+        public static void DefaultConsole()
         {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Centrer("Bienvenue sur le Pokedex");
+            Centrer("Voici les commandes dont vous aurez besoin pour l'utiliser\n");
+            HelpCommand();
+        }
 
+        public static void ListeFooter(int page, int pageMax)
+        {
+            Console.WriteLine("Page " + page + "/" + pageMax);
+            Console.WriteLine("Appuyez sur espace pour passer à la page suivante et sur echap pour quitter");
         }
     }
 }

@@ -39,7 +39,7 @@ namespace RecupDonnees
             }   
         }
 
-        public static async Task<Species> GetDescription(int ID) {
+        public static async Task<Species> GetSpecies(int ID) {
 
             string url = ApiHelper.URL + "pokemon-species/" + ID;
 

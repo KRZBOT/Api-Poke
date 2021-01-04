@@ -150,7 +150,7 @@ namespace Pokedex
             try
             {
                 var pokemon = await ApiCalls.GetPokemon(arg);
-                var species = await ApiCalls.GetDescription(pokemon.id);
+                var species = await ApiCalls.GetSpecies(pokemon.id);
                 var evolutionChain = await ApiCalls.GetEvolution(species.evolution_chain.url);
                               
                 pokemon.Afficher(species, evolutionChain);

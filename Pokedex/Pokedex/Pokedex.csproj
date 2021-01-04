@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Donnees\Donnees.csproj" />
     <ProjectReference Include="..\RecupDonnees\RecupDonnees.csproj" />
+    <ProjectReference Include="..\Tests\Tests.csproj" />
   </ItemGroup>
 
 </Project>

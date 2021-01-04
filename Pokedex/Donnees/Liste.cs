@@ -13,7 +13,7 @@ namespace Donnees
     {
         public int count { get; set; }
         public string next { get; set; }
-        public object previous { get; set; }
+        public string previous { get; set; }
         public IList<Result> results { get; set; }
 
         public void Afficher(int id)

@@ -2,107 +2,159 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Runtime.Caching;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace RecupDonnees
 {
-    public class ApiCalls
+    public static class ApiCalls
     {
-        public static async Task<Pokemon> GetPokemon(String name)
+        public static ObjectCache cache = MemoryCache.Default;
+        public static async Task<Pokemon> GetPokemon(String ID)
         {
-            string url = ApiHelper.URL + "pokemon/" + name;
-
-            using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
-            {
-                Pokemon pokemon = await JsonSerializer.DeserializeAsync<Pokemon>(await response.Content.ReadAsStreamAsync());
+            if (cache.Contains("Pokemon"+ID)){
+                
+                Pokemon pokemon = (Pokemon) cache.Get("Pokemon"+ID);
                 return pokemon;
-
             }
             else
             {
-                throw new Exception(response.ReasonPhrase);
-            }
+                string url = ApiHelper.URL + "pokemon/" + ID;
+
+                using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    Pokemon pokemon = await JsonSerializer.DeserializeAsync<Pokemon>(await response.Content.ReadAsStreamAsync());
+                    cache.Add("Pokemon"+pokemon.name, pokemon, null);
+                    cache.Add("Pokemon"+pokemon.id.ToString(), pokemon, null);
+                    return pokemon;
+
+                }
+                else
+                {
+                    throw new Exception(response.ReasonPhrase);
+                }
+            }   
         }
 
-        public static async Task<Pokemon> GetPokemon(int id)
-        {
-            string url = ApiHelper.URL + "pokemon/" + id;
+        public static async Task<Species> GetDescription(int ID) {
 
-            using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
+            string url = ApiHelper.URL + "pokemon-species/" + ID;
+
+            if (cache.Contains(url))
             {
-                Pokemon pokemon = await JsonSerializer.DeserializeAsync<Pokemon>(await response.Content.ReadAsStreamAsync());
-                return pokemon;
-
-            }
-            else
-            {
-                throw new Exception(response.ReasonPhrase);
-            }
-        }
-
-        public static async Task<Species> GetDescription(int id) {
-            string url = ApiHelper.URL + "pokemon-species/" + id;
-
-            using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
-            {
-                Species species = await JsonSerializer.DeserializeAsync<Species>(await response.Content.ReadAsStreamAsync());
-
+                Species species = (Species) cache.Get(url);
                 return species;
             }
             else
             {
-                throw new Exception(response.ReasonPhrase);
+                using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    Species species = await JsonSerializer.DeserializeAsync<Species>(await response.Content.ReadAsStreamAsync());
+                    cache.Add(url, species, null);
+                    return species;
+                }
+                else
+                {
+                    throw new Exception(response.ReasonPhrase);
+                }
             }
         }
+
         public static async Task<Liste> GetList(int limit)
         {
             string url = ApiHelper.URL + "pokemon?limit=" + limit;
 
-            using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
+            if (cache.Contains(url))
             {
-                Liste liste = await JsonSerializer.DeserializeAsync<Liste>(await response.Content.ReadAsStreamAsync());
-
+                Liste liste = (Liste) cache.Get(url);
                 return liste;
             }
             else
             {
-                throw new Exception(response.ReasonPhrase);
+                using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    Liste liste = await JsonSerializer.DeserializeAsync<Liste>(await response.Content.ReadAsStreamAsync());
+                    cache.Add(url, liste, null);
+                    return liste;
+                }
+                else
+                {
+                    throw new Exception(response.ReasonPhrase);
+                }
             }
         }
         public static async Task<Liste> GetNextList(Liste liste)
         {
             string url = liste.next;
-            using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
+            if (cache.Contains(url))
             {
-                Liste nextListe = await JsonSerializer.DeserializeAsync<Liste>(await response.Content.ReadAsStreamAsync());
-
+                Liste nextListe = (Liste) cache.Get(url);
                 return nextListe;
             }
             else
             {
-                throw new Exception(response.ReasonPhrase);
+                using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    Liste nextListe = await JsonSerializer.DeserializeAsync<Liste>(await response.Content.ReadAsStreamAsync());
+                    cache.Add(url, nextListe, null);
+                    return nextListe;
+                }
+                else
+                {
+                    throw new Exception(response.ReasonPhrase);
+                }
             }
         }
         public static async Task<Liste> GetPreviousList(Liste liste)
         {
-            string url = liste.next;
-            using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
+            string url = liste.previous;
+            if (cache.Contains(url))
             {
-                Liste previousListe = await JsonSerializer.DeserializeAsync<Liste>(await response.Content.ReadAsStreamAsync());
-
+                Liste previousListe = (Liste) cache.Get(url);
                 return previousListe;
             }
             else
             {
-                throw new Exception(response.ReasonPhrase);
+                using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    Liste previousListe = await JsonSerializer.DeserializeAsync<Liste>(await response.Content.ReadAsStreamAsync());
+                    cache.Add(url, previousListe, null);
+                    return previousListe;
+                }
+                else
+                {
+                    throw new Exception(response.ReasonPhrase);
+                }
+            }
+        }
+
+        public static async Task<EvolutionChain> GetEvolution(string url)
+        {
+            if (cache.Contains(url))
+            {
+                EvolutionChain evolutionChain = (EvolutionChain)cache.Get(url);
+                return evolutionChain;
+            }
+            else
+            {
+                using HttpResponseMessage response = await ApiHelper.client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    EvolutionChain evolutionChain = await JsonSerializer.DeserializeAsync<EvolutionChain>(await response.Content.ReadAsStreamAsync());
+                    cache.Add(url, evolutionChain, null);
+                    return evolutionChain;
+                }
+                else
+                {
+                    throw new Exception(response.ReasonPhrase);
+                }
             }
         }
     }
